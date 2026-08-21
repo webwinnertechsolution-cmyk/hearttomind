@@ -1,0 +1,10 @@
+# Public uploaded media (e.g. /storage/images/category/*.png) is served from
+# here and MUST be web-accessible. The sensitive subdirectories (logs, framework)
+# are blocked by their own .htaccess files, so this allows the rest.
+<IfModule mod_authz_core.c>
+    Require all granted
+</IfModule>
+<IfModule !mod_authz_core.c>
+    Order allow,deny
+    Allow from all
+</IfModule>

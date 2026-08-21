@@ -1,0 +1,124 @@
+@extends('layouts.app')
+
+@push('title')
+    <div class="page-title-box">
+        <h4 class="page-title">Playlist Create</h4>
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item active">Create new playlist</li>
+        </ol>
+    </div>
+@endpush
+
+@section('content')
+    <div class="row">
+        <div class="col-md-10 col-lg-9 m-auto">
+            @role('root|admin')
+            <form action="{{ route('playlist.update', $playlist->id) }}" method="POST" enctype="multipart/form-data">
+                @csrf
+                @endrole
+                <div class="card">
+                    <div class="card-header bg-success py-2">
+                        <h4 class="text-white">Edit Playlist</h4>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-lg-8 border-right">
+                                <x-input name="name" type="text" placeholder="Name" value="{{ $playlist->name }}">
+                                </x-input>
+                                <x-input name="duration" type="text" placeholder="Duration"
+                                    value="{{ $playlist->duration }}">
+                                </x-input>
+                                <x-textarea name="description" placeholder="Description"
+                                    value="{{ $playlist->description }}" rows="4"></x-textarea>
+
+                                {{-- Content Type --}}
+                                <div class="form-group">
+                                    <label class="mb-1">Track Type</label>
+                                    <select name="content_type" id="contentTypeSelect" class="form-control"
+                                            onchange="toggleMediaFields(this.value)">
+                                        <option value="audio" {{ ($playlist->content_type ?? 'audio') === 'audio' ? 'selected' : '' }}>Music Track</option>
+                                        <option value="video" {{ ($playlist->content_type ?? 'audio') === 'video' ? 'selected' : '' }}>Video Track</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-lg-4">
+                                <div class="form-group">
+                                    <label class="mb-1">Thumbnail</label>
+                                    <input type="file" class="form-control-file" name="thumbnail"
+                                        onchange="previewLogoFile(event)" />
+                                    <img src="{{ $playlist->thumbnail }}" alt="" id="logoPreview" width="160"
+                                        height="160" class="mt-1">
+                                </div>
+
+                                {{-- Audio upload section --}}
+                                <div class="form-group" id="audioSection"
+                                     style="{{ ($playlist->content_type ?? 'audio') === 'video' ? 'display:none;' : '' }}">
+                                    <label class="mb-1">Audio File</label>
+                                    <input type="file" class="form-control-file" name="audio"
+                                        onchange="previewAudio(event)" />
+                                </div>
+
+                                {{-- Video upload section --}}
+                                <div class="form-group" id="videoSection"
+                                     style="{{ ($playlist->content_type ?? 'audio') === 'video' ? '' : 'display:none;' }}">
+                                    <label class="mb-1">Video File</label>
+                                    <input type="file" class="form-control-file" name="video"
+                                        accept="video/*" />
+                                </div>
+                            </div>
+                        </div>
+                        <div class="d-flex align-items-center" style="gap: 40px">
+                            <div class="d-flex align-items-center" style="gap: 4px">
+                                <input type="checkbox" name="active" id="active" {{ $playlist->status ? 'checked' : '' }}>
+                                <label class="m-0 p-0" for="active">Active</label>
+                            </div>
+                            <div class="d-flex align-items-center" style="gap: 4px">
+                                <input type="checkbox" name="paid" id="paid" {{ $playlist->is_paid ? 'checked' : '' }}>
+                                <label class="m-0 p-0" for="paid">Paid</label>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card-footer d-flex justify-content-between bg-white">
+                        <a href="{{ route('playlist.index') }}" type="button" class="btn btn-secondary text-white">
+                            <i class="fa fa-arrow-left"></i> GO Back
+                        </a>
+                        <button type="submit" class="btn btn-success px-md-4">Save And Update</button>
+                    </div>
+                </div>
+                @role('root|admin')</form>@endrole
+        </div>
+    </div>
+@endsection
+@push('scripts')
+    <script>
+        function toggleMediaFields(type) {
+            var audioSection = document.getElementById('audioSection');
+            var videoSection = document.getElementById('videoSection');
+            if (type === 'video') {
+                audioSection.style.display = 'none';
+                videoSection.style.display = '';
+            } else {
+                audioSection.style.display = '';
+                videoSection.style.display = 'none';
+            }
+        }
+
+        var previewLogoFile = function(event) {
+            var reader = new FileReader();
+            reader.onload = function() {
+                var output = document.getElementById('logoPreview');
+                output.src = reader.result;
+            };
+            reader.readAsDataURL(event.target.files[0]);
+        };
+
+        var previewAudio = function(event) {
+            var reader = new FileReader();
+            reader.onload = function() {
+                var output = document.getElementById('audioPreview');
+                if (output) output.src = reader.result;
+            };
+            reader.readAsDataURL(event.target.files[0]);
+        };
+    </script>
+@endpush

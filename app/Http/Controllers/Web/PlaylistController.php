@@ -1,0 +1,121 @@
+<?php
+
+namespace App\Http\Controllers\Web;
+
+use App\Http\Controllers\Controller;
+use App\Http\Requests\PlayListRequest;
+use App\Http\Requests\ReadmoreRequest;
+use App\Models\PlayList;
+use App\Models\Readmore;
+use Illuminate\Http\Request;
+use App\Repositories\AlbamRepository;
+use App\Repositories\CategoryRepository;
+use App\Repositories\PlayListRepository;
+use Illuminate\Support\Facades\Storage;
+
+class PlaylistController extends Controller
+{
+    public function index()
+    {
+        $playlists = (new PlayListRepository())->getAllByPaginate();
+        return view('playlist.index', compact('playlists'));
+    }
+
+    public function toggle(PlayList $playlist)
+    {
+        $playlist->update([
+            'status' => !$playlist->status
+        ]);
+        return back()->with('success', 'Status Update Successfully');
+    }
+
+    function updatePaidStatus(PlayList $playlist)
+    {
+        $playlist->update([
+            'is_paid' => !$playlist->is_paid
+        ]);
+        return redirect()->route('playlist.index')->with('success', 'Paid Status Updated Successfully');
+    }
+
+    public function show(PlayList $playlist)
+    {
+        return view('playlist.show', compact('playlist'));
+    }
+
+    public function create()
+    {
+        $categories = (new CategoryRepository())->getByActive();
+        $albams = (new AlbamRepository())->getAll();
+        $selectedAlbamId = request('albam_id');
+        $selectedContentType = request('content_type', 'audio');
+        return view('playlist.create', compact('categories', 'albams', 'selectedAlbamId', 'selectedContentType'));
+    }
+    public function store(PlayListRequest $request)
+    {
+        (new PlayListRepository())->storeByRequest($request);
+        return redirect()->route('playlist.index')->with('success', 'Create successfully');
+    }
+
+    public function edit(PlayList $playlist)
+    {
+        $categories = (new CategoryRepository())->getAll();
+        $albams = (new AlbamRepository())->findById($playlist->category_id);
+        return view('playlist.edit', compact('categories', 'playlist', 'albams'));
+    }
+
+    public function update(PlayListRequest $request, PlayList $playlist)
+    {
+        (new PlayListRepository())->updateByRequest($request, $playlist);
+        return redirect()->route('playlist.index')->with('success', 'Update Successfully');
+    }
+
+    public function delete(PlayList $playlist)
+    {
+        $media = $playlist->media;
+        $audio = $playlist->audio;
+        if ($media && Storage::exists($media->src)) {
+            Storage::delete($media->src);
+        }
+        if ($audio && Storage::exists($audio->src)) {
+            Storage::delete($audio->src);
+        }
+        $playlist->delete();
+        return back()->with('success', 'Deleted Successfully');
+    }
+
+    public function readmore(PlayList $playlist){
+        return view('playlist.readmore', compact('playlist'));
+    }
+
+    public function readmoreUpdate(PlayList $playlist, ReadmoreRequest $request){
+        Readmore::updateOrCreate([
+            'id' => $playlist->readmore->id ?? 0
+        ],[
+            'play_list_id' => $playlist->id,
+            'title' => $request->title,
+            'sub_title' => $request->sub_title,
+            'content' => $request->content
+        ]);
+        return to_route('playlist.index')->with('success', 'Read more added successfully');
+    }
+
+    public function reorder($id, $direction)
+    {
+        $item = PlayList::findOrFail($id);
+        if ($direction === 'up') {
+            $swap = PlayList::where('display_order', '<', $item->display_order)
+                ->orderBy('display_order', 'desc')
+                ->first();
+        } else {
+            $swap = PlayList::where('display_order', '>', $item->display_order)
+                ->orderBy('display_order', 'asc')
+                ->first();
+        }
+        if ($swap) {
+            [$item->display_order, $swap->display_order] = [$swap->display_order, $item->display_order];
+            $item->save();
+            $swap->save();
+        }
+        return back();
+    }
+}
